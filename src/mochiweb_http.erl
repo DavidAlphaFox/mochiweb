@@ -81,9 +81,10 @@ ensure_started(M) ->
     end.
 
 loop(Socket, Opts, Body) ->
+    %% 直接让Erlang来处理Http请求头
     ok = mochiweb_socket:exit_if_closed(mochiweb_socket:setopts(Socket, [{packet, http}])),
     request(Socket, Opts, Body).
-
+%% 处理Socket所接收的请求
 request(Socket, Opts, Body) ->
     ok = mochiweb_socket:exit_if_closed(mochiweb_socket:setopts(Socket, [{active, once}])),
     receive
@@ -117,11 +118,16 @@ headers(Socket, Opts, Request, Headers, _Body, ?MAX_HEADERS) ->
 headers(Socket, Opts, Request, Headers, Body, HeaderCount) ->
     ok = mochiweb_socket:exit_if_closed(mochiweb_socket:setopts(Socket, [{active, once}])),
     receive
+        %% http结束
         {Protocol, _, http_eoh} when Protocol == http orelse Protocol == ssl ->
+            %% 创建http请求
             Req = new_request(Socket, Opts, Request, Headers),
+            %% 让用户部分执行请求
             call_body(Body, Req),
             ?MODULE:after_response(Body, Req);
+            %% http的头部分
         {Protocol, _, {http_header, _, Name, _, Value}} when Protocol == http orelse Protocol == ssl ->
+            %% 循环保存请求头
             headers(Socket, Opts, Request, [{Name, Value} | Headers], Body,
                     1 + HeaderCount);
         {tcp_closed, _} ->
