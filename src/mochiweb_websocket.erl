@@ -32,6 +32,7 @@
 -endif.
 
 loop(Socket, Body, State, WsVersion, ReplyChannel) ->
+    %% 将socket的解码恢复为packet 0
     ok = mochiweb_socket:exit_if_closed(mochiweb_socket:setopts(Socket, [{packet, 0}, {active, once}])),
     proc_lib:hibernate(?MODULE, request,
                        [Socket, Body, State, WsVersion, ReplyChannel]).
@@ -48,6 +49,7 @@ request(Socket, Body, State, WsVersion, ReplyChannel) ->
             mochiweb_socket:close(Socket),
             exit(normal);
         {Proto, _, WsFrames} when Proto =:= tcp orelse Proto =:= ssl ->
+            %% 分析frame
             case parse_frames(WsVersion, WsFrames, Socket) of
                 close ->
                     mochiweb_socket:close(Socket),
@@ -76,11 +78,12 @@ send(Socket, Payload, hybi) ->
     mochiweb_socket:send(Socket, [Prefix, Payload]);
 send(Socket, Payload, hixie) ->
     mochiweb_socket:send(Socket, [0, Payload, 255]).
-
+%% 对请求进行升级
 upgrade_connection(Req, Body) ->
     case make_handshake(Req) of
         {Version, Response} ->
             Req:respond(Response),
+            %% 获取原始socket
             Socket = Req:get(socket),
             ReplyChannel = fun (Payload) ->
                 ?MODULE:send(Socket, Payload, Version)
