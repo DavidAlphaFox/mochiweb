@@ -45,7 +45,7 @@ do_accept(Server, Listen) ->
         Other ->
             Other
     end.
-
+%% 启动acceptor
 init(Server, Listen, Loop, Opts) ->
     case catch do_accept(Server, Listen) of
         {ok, Socket} ->

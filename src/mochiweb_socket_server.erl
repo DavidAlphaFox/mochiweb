@@ -180,6 +180,7 @@ ipv6_supported() ->
 
 init(State=#mochiweb_socket_server{ip=Ip, port=Port, backlog=Backlog,
                                    nodelay=NoDelay, recbuf=RecBuf}) ->
+    %% 自身跟踪进程的死活
     process_flag(trap_exit, true),
 
     BaseOpts = [binary,
@@ -200,7 +201,7 @@ init(State=#mochiweb_socket_server{ip=Ip, port=Port, backlog=Backlog,
         {_, _, _, _, _, _, _, _} -> % IPv6
             [inet6, {ip, Ip} | BaseOpts]
     end,
-    OptsBuf=case RecBuf of 
+    OptsBuf = case RecBuf of 
         undefined ->
             Opts;
         _ ->
@@ -218,7 +219,7 @@ new_acceptor(State=#mochiweb_socket_server{acceptor_pool=Pool,
     LoopOpts = [{recbuf, RecBuf}],
     Pid = mochiweb_acceptor:start_link(self(), Listen, Loop, LoopOpts),
     State#mochiweb_socket_server{
-      acceptor_pool=sets:add_element(Pid, Pool)}.
+      acceptor_pool = sets:add_element(Pid, Pool)}.
 
 listen(Port, Opts, State=#mochiweb_socket_server{ssl=Ssl, ssl_opts=SslOpts}) ->
     case mochiweb_socket:listen(Ssl, Port, Opts, SslOpts) of
